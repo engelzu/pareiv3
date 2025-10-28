@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PAREI - Gestão de Tarefas</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="index.css">
+<script type="importmap">
+{
+  "imports": {
+    "@supabase/supabase-js": "https://aistudiocdn.com/@supabase/supabase-js@^2.76.1",
+    "vite": "https://aistudiocdn.com/vite@^7.1.12",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-slate-200 py-8 px-4">
+
+  <div class="container mx-auto max-w-7xl">
+    <div class="bg-white rounded-xl shadow-lg">
+      <!-- Header Section -->
+      <div class="bg-gradient-to-b from-blue-900 to-blue-700 p-6 rounded-t-xl border-b border-blue-900/50">
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+          <h1 class="text-2xl font-bold text-white sm:self-center">PAREI - Gestão de Tarefas</h1>
+          <div class="flex flex-wrap items-center justify-center sm:justify-end gap-4 w-full sm:flex-nowrap sm:w-auto">
+            <span id="connectionStatus"></span>
+            <span id="lastUpdated" class="text-sm text-blue-200 whitespace-nowrap"></span>
+            <button id="refreshBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto transition-colors">
+              <i class="fas fa-sync-alt mr-2"></i>Atualizar
+            </button>
+          </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div id="filterControls" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-blue-200 mb-1">Pesquisar</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                        <input id="searchInput" type="text" placeholder="Nome, status, responsável..." class="dark-input pl-10">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blue-200 mb-1">ÁREA</label>
+                    <select id="areaFilter" class="dark-input"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blue-200 mb-1">RESPONSÁVEL</label>
+                    <select id="responsavelFilter" class="dark-input"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blue-200 mb-1">ATUALIZADOR 1</label>
+                    <select id="atualizador1Filter" class="dark-input"></select>
+                </div>
+            </div>
+             <div class="flex flex-col sm:flex-row justify-between items-center pt-2 gap-4">
+                <div class="flex flex-col sm:flex-row items-center gap-4">
+                    <div class="flex items-center space-x-1 bg-white/10 p-1 rounded-lg">
+                        <button id="viewToggleList" class="px-4 py-1.5 text-sm font-semibold rounded-md flex items-center gap-2 transition-colors text-blue-200">
+                            <i class="fas fa-list"></i> Lista
+                        </button>
+                        <button id="viewToggleCard" class="px-4 py-1.5 text-sm font-semibold rounded-md flex items-center gap-2 transition-colors text-blue-200">
+                            <i class="fas fa-th-large"></i> Cartão
+                        </button>
+                    </div>
+                    <div id="taskCount" class="text-sm font-semibold text-blue-200"></div>
+                </div>
+                <button id="clearFilters" class="mt-4 sm:mt-0 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg border border-white/20 flex items-center justify-center w-full sm:w-auto transition-colors">
+                    <i class="fas fa-times mr-2"></i>Limpar Filtros
+                </button>
+            </div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+     <div class="p-2 sm:p-6 bg-gradient-to-b from-blue-400 to-green-400">
+        <div id="loading" class="text-center py-20">
+            <svg class="mx-auto h-12 w-12 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="mt-4 text-slate-600">Carregando dados...</p>
+        </div>
+
+        <div id="errorContainer" class="hidden m-6">
+             <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-circle text-red-500"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p id="errorMessage" class="text-sm text-red-700"></p>
+                    </div>
+                    <button id="retryBtn" class="ml-auto bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-lg text-sm transition-colors">
+                        Tentar novamente
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="dataContainer" class="hidden">
+           <!-- Table View -->
+           <div id="tableViewContainer" class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr id="tableHeaders"></tr>
+                </thead>
+                <tbody id="tableBody" class="bg-white divide-y divide-gray-200"></tbody>
+              </table>
+           </div>
+           
+           <!-- Card View -->
+           <div id="cardViewContainer" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-4 bg-gradient-to-b from-blue-400 to-green-400">
+              <!-- Cards will be inserted here by JavaScript -->
+           </div>
+
+          <!-- Pagination -->
+          <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 px-4">
+            <div id="paginationInfo" class="text-sm text-slate-700"></div>
+            <div class="flex items-center space-x-2">
+              <button id="prevPage" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                Anterior
+              </button>
+              <div id="pageNumbers" class="flex items-center space-x-1"></div>
+              <button id="nextPage" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                Próxima
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="index.tsx"></script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
