@@ -47,7 +47,7 @@
 
         <!-- Filters Section -->
         <div id="filterControls" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-blue-200 mb-1">Pesquisar</label>
                     <div class="relative">
@@ -68,6 +68,14 @@
                 <div>
                     <label class="block text-sm font-medium text-blue-200 mb-1">ATUALIZADOR 1</label>
                     <select id="atualizador1Filter" class="dark-input"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-blue-200 mb-1">TIPO DE TAREFA</label>
+                    <select id="typeFilter" class="dark-input">
+                        <option value="">Todos</option>
+                        <option value="SIM">Resumo</option>
+                        <option value="NAO">Tarefa</option>
+                    </select>
                 </div>
             </div>
              <div class="flex flex-col sm:flex-row justify-between items-center pt-2 gap-4">
