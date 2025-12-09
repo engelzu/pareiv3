@@ -177,7 +177,22 @@ const App = {
             this.updateUI();
         } catch (error) {
             console.error('Erro ao buscar dados:', error);
-            this.showError(`Erro ao carregar dados: ${error.message}`);
+            // FIX: Improved error handling to display more informative messages in the UI
+            // instead of a generic "[object Object]". This robustly handles different
+            // error shapes.
+            let errorMessage = 'Ocorreu um erro desconhecido.';
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            } else if (error && typeof error === 'object' && 'message' in error) {
+                errorMessage = String((error as { message: unknown }).message);
+            } else {
+                try {
+                    errorMessage = JSON.stringify(error);
+                } catch {
+                    errorMessage = String(error);
+                }
+            }
+            this.showError(`Erro ao carregar dados: ${errorMessage}`);
         }
     },
 
