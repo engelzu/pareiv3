@@ -21,12 +21,68 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <link rel="stylesheet" href="/index.css">
 </head>
-<body class="bg-slate-200 py-8 px-4">
+<body class="bg-slate-200">
 
-  <div>
+  <!-- Login Screen -->
+  <div id="loginScreen" class="fixed inset-0 bg-slate-800 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md">
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-blue-900">PAREI V2</h1>
+        <p class="text-slate-500 mt-2">Sistema de Gestão de Tarefas</p>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">E-mail</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-envelope text-gray-400"></i>
+            </div>
+            <input type="email" id="loginEmail" class="dark-input pl-10 bg-slate-50 border-slate-300 text-slate-900" placeholder="seu@email.com">
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
+          <div class="relative">
+             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-lock text-gray-400"></i>
+            </div>
+            <input type="password" id="loginPassword" class="dark-input pl-10 bg-slate-50 border-slate-300 text-slate-900" placeholder="••••••">
+          </div>
+        </div>
+
+        <div id="loginError" class="text-red-500 text-sm font-medium hidden text-center bg-red-50 p-2 rounded"></div>
+
+        <button id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors mt-4">
+          ENTRAR
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App (Hidden by default) -->
+  <div id="mainApp" class="hidden py-8 px-4">
     <div class="bg-white rounded-xl shadow-lg">
       <!-- Header Section -->
       <div class="bg-gradient-to-b from-blue-900 to-blue-700 p-6 rounded-t-xl border-b border-blue-900/50">
+        <!-- Top Bar with User Info -->
+        <div class="flex justify-between items-center mb-4 border-b border-blue-600/30 pb-4">
+           <div class="flex items-center gap-2 text-blue-100 text-sm">
+             <i class="fas fa-user-circle"></i>
+             <span id="currentUserDisplay">Usuário</span>
+             <span id="adminBadge" class="hidden bg-yellow-500 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full ml-2">ADMIN</span>
+           </div>
+           <div class="flex gap-2">
+             <button id="adminRegisterUserBtn" class="hidden bg-blue-800 hover:bg-blue-600 text-white text-xs px-3 py-1.5 rounded transition-colors border border-blue-500">
+               <i class="fas fa-user-plus mr-1"></i> Cadastrar Usuário
+             </button>
+             <button id="logoutBtn" class="bg-red-500/20 hover:bg-red-500 text-white text-xs px-3 py-1.5 rounded transition-colors border border-red-500/30">
+               <i class="fas fa-sign-out-alt mr-1"></i> Sair
+             </button>
+           </div>
+        </div>
+
         <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <h1 class="text-2xl font-bold text-white sm:self-center">PAREI - Gestão de Tarefas</h1>
           <div class="flex flex-wrap items-center justify-center sm:justify-end gap-4 w-full sm:flex-nowrap sm:w-auto">
@@ -175,7 +231,7 @@
     </div>
   </div>
 
-  <!-- Password Modal -->
+  <!-- Password Modal (Existing) -->
   <div id="passwordModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md transition-all">
       <!-- Step 1: Password Input -->
@@ -219,8 +275,7 @@
     </div>
   </div>
 
-
-  <!-- Import Modal -->
+  <!-- Import Modal (Existing) -->
   <div id="importModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
       <div class="flex justify-between items-center">
@@ -236,21 +291,38 @@
     </div>
   </div>
   
-  <!-- Details Modal -->
-  <div id="detailsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div class="bg-gradient-to-br from-blue-50 to-green-50 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-        <div class="p-6 border-b">
-            <div class="flex justify-between items-center">
-                <h3 id="detailsModalTitle" class="text-lg font-bold text-slate-800">Detalhes da Tarefa</h3>
-                <button id="detailsModalCloseBtn" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
-            </div>
+  <!-- Register User Modal (New) -->
+  <div id="registerUserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-slate-800">Cadastrar Novo Usuário</h3>
+        <button id="registerUserModalCloseBtn" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
+      </div>
+      
+      <div class="space-y-4">
+         <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">E-mail</label>
+          <input type="email" id="regEmail" class="block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-900 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
         </div>
-        <div id="detailsModalBody" class="p-6 text-sm text-slate-700 space-y-2 overflow-y-auto custom-scrollbar flex-grow">
-            <!-- Dynamic content here -->
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
+          <input type="password" id="regPassword" class="block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-900 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
         </div>
-        <div class="p-4 bg-gray-50 rounded-b-lg flex justify-end">
-            <button id="detailsModalActionBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2 rounded-lg shadow-md transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">Fechar</button>
+         <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Tipo de Acesso</label>
+          <select id="regRole" class="block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-900 text-sm">
+             <option value="user">Usuário Comum</option>
+             <option value="admin">Administrador</option>
+          </select>
         </div>
+        <p id="regError" class="text-red-500 text-xs hidden"></p>
+        <p id="regSuccess" class="text-green-600 text-xs hidden"></p>
+      </div>
+
+      <div class="mt-6 flex justify-end gap-2">
+        <button id="registerUserCancelBtn" class="bg-gray-200 hover:bg-gray-300 text-slate-700 px-4 py-2 rounded-lg">Cancelar</button>
+        <button id="registerUserSubmitBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Salvar Usuário</button>
+      </div>
     </div>
   </div>
 

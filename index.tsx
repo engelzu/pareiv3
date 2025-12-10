@@ -11,6 +11,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // --- Configuração da Aplicação ---
 const CARDS_PER_PAGE = 12; // Cards can be larger, so show fewer per page
 const ROWS_PER_PAGE = 20;
+const IMPORT_PASSWORD = '789512'; // Senha para importação
+
 const displayToDbMap = {
   "AVANÇO": "avanco", "STATUS": "status", "ORDEM": "ordem",
   "NOME DA TAREFA": "nome_da_tarefa", "RESPONSÁVEL": "responsavel",
@@ -30,6 +32,7 @@ const App = {
         currentView: 'list', // 'list', 'card', 'chart', 'prevReal'
         chartInstance: null,
         prevRealChartInstance: null,
+        currentUser: null, // { email: string, role: 'admin' | 'user' }
     },
 
     // --- Inicialização ---
@@ -54,8 +57,9 @@ const App = {
                 this.renderPagination();
              }
         });
-        this.loadDataFromStorage();
-        this.updateConnectionStatus();
+        
+        // Initial State: Check for login or show login screen
+        this.checkSession();
     },
 
     cacheElements() {
@@ -67,15 +71,115 @@ const App = {
             'connectionStatus', 
             'viewToggleList', 'viewToggleCard', 'viewToggleChart', 'viewTogglePrevReal', 
             'tableViewContainer', 'cardViewContainer', 'chartViewContainer', 'prevRealChartContainer', 
-            'areaChart', 'taskCount', 'paginationContainer'
+            'areaChart', 'taskCount', 'paginationContainer',
+            // Import/Export Elements
+            'importBtn', 'exportBtn', 'fileInput',
+            'passwordModal', 'passwordInput', 'passwordSubmitBtn', 'passwordCancelBtn', 'passwordModalCloseBtn', 'passwordError',
+            'passwordStep1', 'passwordStep2', 'exportCurrentDataBtn', 'proceedToImportBtn', 'passwordCancelBtn2', 'passwordModalCloseBtn2',
+            'importModal', 'importModalBody', 'importModalCloseBtn', 'importModalActionBtn',
+            // Login & User Mgmt Elements
+            'loginScreen', 'mainApp', 'loginEmail', 'loginPassword', 'loginBtn', 'loginError',
+            'currentUserDisplay', 'adminBadge', 'logoutBtn', 'adminRegisterUserBtn',
+            'registerUserModal', 'registerUserModalCloseBtn', 'registerUserCancelBtn', 'registerUserSubmitBtn',
+            'regEmail', 'regPassword', 'regRole', 'regError', 'regSuccess'
         ];
         ids.forEach(id => this.elements[id] = document.getElementById(id));
     },
 
     bindEvents() {
+        // --- AUTH EVENTS ---
+        this.elements.loginBtn.addEventListener('click', () => this.handleLogin());
+        this.elements.logoutBtn.addEventListener('click', () => this.handleLogout());
+        this.elements.adminRegisterUserBtn.addEventListener('click', () => {
+             this.elements.regEmail.value = '';
+             this.elements.regPassword.value = '';
+             this.elements.regRole.value = 'user';
+             this.elements.regError.classList.add('hidden');
+             this.elements.regSuccess.classList.add('hidden');
+             this.elements.registerUserModal.classList.remove('hidden');
+        });
+        
+        // Register Modal Events
+        this.elements.registerUserModalCloseBtn.addEventListener('click', () => this.elements.registerUserModal.classList.add('hidden'));
+        this.elements.registerUserCancelBtn.addEventListener('click', () => this.elements.registerUserModal.classList.add('hidden'));
+        this.elements.registerUserSubmitBtn.addEventListener('click', () => this.handleRegisterUser());
+        
+        // Login on Enter key
+        this.elements.loginPassword.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.handleLogin();
+        });
+
+
+        // --- EXISTING EVENTS ---
         this.elements.refreshBtn.addEventListener('click', () => this.fetchData());
         this.elements.retryBtn.addEventListener('click', () => this.fetchData());
         
+        // Export Template
+        if (this.elements.exportBtn) {
+            this.elements.exportBtn.addEventListener('click', () => {
+                const ws = (window as any).XLSX.utils.json_to_sheet([{ "ORDEM": 1, "NOME DA TAREFA": "Exemplo", "RESPONSÁVEL": "Fulano", "ÁREA": "SECAGEM", "AVANÇO": "0%", "ID": "100" }]);
+                const wb = (window as any).XLSX.utils.book_new();
+                (window as any).XLSX.utils.book_append_sheet(wb, ws, "Template");
+                (window as any).XLSX.writeFile(wb, "template_parei.xlsx");
+            });
+        }
+
+        // Import Flow
+        if (this.elements.importBtn) {
+            this.elements.importBtn.addEventListener('click', () => {
+                this.elements.passwordInput.value = '';
+                this.elements.passwordError.textContent = '';
+                this.elements.passwordStep1.classList.remove('hidden');
+                this.elements.passwordStep2.classList.add('hidden');
+                this.elements.passwordModal.classList.remove('hidden');
+            });
+        }
+
+        // Password Modal Events
+        this.elements.passwordCancelBtn.addEventListener('click', () => this.elements.passwordModal.classList.add('hidden'));
+        this.elements.passwordModalCloseBtn.addEventListener('click', () => this.elements.passwordModal.classList.add('hidden'));
+        this.elements.passwordCancelBtn2.addEventListener('click', () => this.elements.passwordModal.classList.add('hidden'));
+        this.elements.passwordModalCloseBtn2.addEventListener('click', () => this.elements.passwordModal.classList.add('hidden'));
+
+        this.elements.passwordSubmitBtn.addEventListener('click', () => {
+            if (this.elements.passwordInput.value === IMPORT_PASSWORD) {
+                this.elements.passwordStep1.classList.add('hidden');
+                this.elements.passwordStep2.classList.remove('hidden');
+            } else {
+                this.elements.passwordError.textContent = 'Senha incorreta.';
+                this.elements.passwordInput.classList.add('animate-shake');
+                setTimeout(() => this.elements.passwordInput.classList.remove('animate-shake'), 500);
+            }
+        });
+
+        // Backup Flow
+        this.elements.exportCurrentDataBtn.addEventListener('click', () => {
+            const exportData = this.state.allData.map(row => {
+                const newRow = {};
+                Object.keys(displayToDbMap).forEach(key => {
+                    newRow[key] = row[displayToDbMap[key]];
+                });
+                return newRow;
+            });
+            const ws = (window as any).XLSX.utils.json_to_sheet(exportData);
+            const wb = (window as any).XLSX.utils.book_new();
+            (window as any).XLSX.utils.book_append_sheet(wb, ws, "Backup");
+            (window as any).XLSX.writeFile(wb, `backup_parei_${new Date().toISOString().slice(0,10)}.xlsx`);
+            
+            this.elements.proceedToImportBtn.disabled = false;
+            this.elements.proceedToImportBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+            this.elements.proceedToImportBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+        });
+
+        this.elements.proceedToImportBtn.addEventListener('click', () => {
+            this.elements.passwordModal.classList.add('hidden');
+            this.showImportConfigModal();
+        });
+
+        this.elements.importModalCloseBtn.addEventListener('click', () => this.elements.importModal.classList.add('hidden'));
+        this.elements.importModalActionBtn.addEventListener('click', () => this.elements.importModal.classList.add('hidden'));
+
+        // Main UI Events
         const filterHandler = () => {
             this.state.currentPage = 1;
             this.filterAndRender();
@@ -116,6 +220,326 @@ const App = {
                 this.renderContent();
             }
         });
+    },
+
+    // --- AUTH LOGIC ---
+    checkSession() {
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+            try {
+                this.state.currentUser = JSON.parse(storedUser);
+                this.showDashboard();
+            } catch (e) {
+                this.showLogin();
+            }
+        } else {
+            this.showLogin();
+        }
+    },
+
+    showLogin() {
+        this.elements.loginScreen.classList.remove('hidden');
+        this.elements.mainApp.classList.add('hidden');
+    },
+
+    showDashboard() {
+        this.elements.loginScreen.classList.add('hidden');
+        this.elements.mainApp.classList.remove('hidden');
+        
+        // Update User Info in Header
+        if (this.state.currentUser) {
+            this.elements.currentUserDisplay.textContent = this.state.currentUser.email;
+            
+            if (this.state.currentUser.role === 'admin') {
+                this.elements.adminBadge.classList.remove('hidden');
+                this.elements.adminRegisterUserBtn.classList.remove('hidden');
+            } else {
+                this.elements.adminBadge.classList.add('hidden');
+                this.elements.adminRegisterUserBtn.classList.add('hidden');
+            }
+        }
+
+        this.loadDataFromStorage();
+        this.updateConnectionStatus();
+    },
+
+    handleLogout() {
+        this.state.currentUser = null;
+        localStorage.removeItem('currentUser');
+        this.showLogin();
+        this.elements.loginEmail.value = '';
+        this.elements.loginPassword.value = '';
+        this.elements.loginError.classList.add('hidden');
+    },
+
+    async handleLogin() {
+        const email = this.elements.loginEmail.value.trim();
+        const password = this.elements.loginPassword.value.trim();
+        const errorEl = this.elements.loginError;
+
+        if (!email || !password) {
+            errorEl.textContent = 'Preencha todos os campos.';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        errorEl.classList.add('hidden');
+        this.elements.loginBtn.disabled = true;
+        this.elements.loginBtn.textContent = 'Verificando...';
+
+        // 1. Hardcoded Admin Check (as requested)
+        if (email === 'admin@admin.com' && password === '789512') {
+            const adminUser = { email: 'admin@admin.com', role: 'admin' };
+            this.state.currentUser = adminUser;
+            localStorage.setItem('currentUser', JSON.stringify(adminUser));
+            this.showDashboard();
+            this.elements.loginBtn.disabled = false;
+            this.elements.loginBtn.textContent = 'ENTRAR';
+            return;
+        }
+
+        // 2. Database Check
+        try {
+            const { data, error } = await this.supabase
+                .from('usuarios')
+                .select('*')
+                .eq('email', email)
+                .eq('senha', password) // Note: In production, assume comparison of hashed passwords on server or via Supabase Auth
+                .single();
+
+            if (error || !data) {
+                throw new Error('Credenciais inválidas.');
+            }
+
+            const user = { email: data.email, role: data.role || 'user' };
+            this.state.currentUser = user;
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            this.showDashboard();
+
+        } catch (err) {
+            errorEl.textContent = 'E-mail ou senha incorretos.';
+            errorEl.classList.remove('hidden');
+        } finally {
+            this.elements.loginBtn.disabled = false;
+            this.elements.loginBtn.textContent = 'ENTRAR';
+        }
+    },
+
+    async handleRegisterUser() {
+        const email = this.elements.regEmail.value.trim();
+        const password = this.elements.regPassword.value.trim();
+        const role = this.elements.regRole.value;
+        const errorEl = this.elements.regError;
+        const successEl = this.elements.regSuccess;
+
+        if (!email || !password) {
+            errorEl.textContent = 'Preencha todos os campos.';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        errorEl.classList.add('hidden');
+        successEl.classList.add('hidden');
+        this.elements.registerUserSubmitBtn.disabled = true;
+
+        try {
+            const { error } = await this.supabase
+                .from('usuarios')
+                .insert([{ email, senha: password, role }]);
+
+            if (error) {
+                if (error.code === '23505') throw new Error('Este e-mail já está cadastrado.');
+                throw error;
+            }
+
+            successEl.textContent = 'Usuário cadastrado com sucesso!';
+            successEl.classList.remove('hidden');
+            
+            // Clear inputs
+            this.elements.regEmail.value = '';
+            this.elements.regPassword.value = '';
+            
+            // Close modal after delay
+            setTimeout(() => {
+                this.elements.registerUserModal.classList.add('hidden');
+                successEl.classList.add('hidden');
+            }, 1500);
+
+        } catch (err) {
+            errorEl.textContent = err.message || 'Erro ao cadastrar usuário.';
+            errorEl.classList.remove('hidden');
+        } finally {
+            this.elements.registerUserSubmitBtn.disabled = false;
+        }
+    },
+
+
+    showImportConfigModal() {
+        // Obter áreas únicas para o dropdown
+        const areas = [...new Set(this.state.allData.map(item => item.area).filter(Boolean))].sort();
+        
+        const modalBody = this.elements.importModalBody;
+        // FIX: Replaced class 'dark-input' with standard tailwind classes for light inputs.
+        // 'dark-input' was enforcing white text on a white background, making it invisible.
+        modalBody.innerHTML = `
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Para qual área você deseja importar?</label>
+                    <select id="importAreaSelect" class="block w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-900 text-sm shadow-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                        <option value="ALL" class="font-bold">🌍 TODAS AS ÁREAS (Substituir tudo)</option>
+                        ${areas.map(area => `<option value="${area}">${area}</option>`).join('')}
+                        <option value="NEW" class="text-blue-600 font-bold">➕ Nova Área / Digitar Manualmente...</option>
+                    </select>
+                    <div id="newAreaContainer" class="hidden mt-2">
+                         <input type="text" id="newAreaInput" placeholder="Digite o nome da nova área (ex: MONTAGEM)" 
+                                class="block w-full px-3 py-2 bg-blue-50 border border-blue-300 rounded-md text-blue-900 text-sm placeholder-blue-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 uppercase"/>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">
+                        <i class="fas fa-info-circle"></i> 
+                        Se selecionar uma área específica, apenas as tarefas dessa área serão substituídas.
+                    </p>
+                </div>
+                
+                <div class="border-t border-slate-200 pt-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Selecione o arquivo Excel (.xlsx)</label>
+                    <input type="file" id="modalFileInput" accept=".xlsx, .xls" class="block w-full text-sm text-slate-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-blue-50 file:text-blue-700
+                        hover:file:bg-blue-100
+                    "/>
+                </div>
+
+                <div id="importStatus" class="hidden p-3 bg-blue-50 text-blue-700 rounded-lg text-sm">
+                    <i class="fas fa-spinner fa-spin mr-2"></i> Processando...
+                </div>
+                
+                <button id="runImportBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors mt-2">
+                    <i class="fas fa-file-import mr-2"></i> Iniciar Importação
+                </button>
+            </div>
+        `;
+
+        this.elements.importModal.classList.remove('hidden');
+
+        // Logic for New Area Toggle
+        const select = document.getElementById('importAreaSelect');
+        const inputContainer = document.getElementById('newAreaContainer');
+        select.addEventListener('change', (e) => {
+            if ((e.target as HTMLSelectElement).value === 'NEW') {
+                inputContainer.classList.remove('hidden');
+                document.getElementById('newAreaInput').focus();
+            } else {
+                inputContainer.classList.add('hidden');
+            }
+        });
+
+        // Bind events inside the modal
+        document.getElementById('runImportBtn').addEventListener('click', () => {
+            const fileInput = document.getElementById('modalFileInput') as HTMLInputElement;
+            const areaSelect = document.getElementById('importAreaSelect') as HTMLSelectElement;
+            let selectedArea = areaSelect.value;
+            
+            // Handle Manual Entry
+            if (selectedArea === 'NEW') {
+                const newAreaInput = document.getElementById('newAreaInput') as HTMLInputElement;
+                selectedArea = newAreaInput.value.trim().toUpperCase();
+                if (!selectedArea) {
+                    alert('Por favor, digite o nome da nova área.');
+                    return;
+                }
+            }
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Por favor, selecione um arquivo.');
+                return;
+            }
+            
+            this.processImportFile(fileInput.files[0], selectedArea);
+        });
+    },
+
+    async processImportFile(file, selectedArea) {
+        const statusEl = document.getElementById('importStatus');
+        statusEl.classList.remove('hidden');
+        statusEl.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Lendo arquivo...`;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = new Uint8Array(e.target.result as ArrayBuffer);
+                const workbook = (window as any).XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = (window as any).XLSX.utils.sheet_to_json(firstSheet);
+
+                if (jsonData.length === 0) throw new Error("Arquivo vazio.");
+
+                // Map Excel headers to DB columns
+                let rowsToInsert = jsonData.map(row => {
+                    const newRow = {};
+                    Object.keys(displayToDbMap).forEach(displayHeader => {
+                        const dbKey = displayToDbMap[displayHeader];
+                        newRow[dbKey] = row[displayHeader] ? String(row[displayHeader]) : null;
+                    });
+                    
+                    // Extra fields processing
+                    newRow['resumo_sim_nao'] = row['RESUMO'] || null;
+                    newRow['atualizador_1_email'] = row['ATUALIZADOR 1'] || null;
+                    
+                    // Format dates if strictly needed, otherwise Supabase usually handles ISO strings well
+                    // or keeps them as text depending on DB schema. Assuming text/varchar for simplicity based on provided code.
+                    
+                    return newRow;
+                });
+
+                statusEl.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Enviando para o banco de dados...`;
+
+                // --- LOGIC FOR AREA IMPORT ---
+                if (selectedArea === 'ALL') {
+                    // Scenario 1: Delete ALL, Insert ALL
+                    // Note: Supabase doesn't have a truncate easily accessible via JS client without RLS policies sometimes,
+                    // but delete w/ filter usually works. Warning: This is destructive.
+                    
+                    // Hack to delete all rows: id is not null (assuming id exists)
+                    // First fetch IDs to verify we can delete
+                    const { error: delError } = await this.supabase.from('tarefas').delete().neq('id', 0); // Assuming IDs are > 0
+                    if (delError) throw delError;
+
+                } else {
+                    // Scenario 2: Delete Specific Area, Insert filtered rows
+                    
+                    // 1. Filter rows to insert: Ensure we only insert rows that belong to the selected area
+                    // This prevents a user from uploading a "PINTURA" row when "SECAGEM" is selected
+                    const originalCount = rowsToInsert.length;
+                    rowsToInsert = rowsToInsert.filter(r => r.area === selectedArea);
+                    
+                    if (rowsToInsert.length === 0) {
+                        throw new Error(`Nenhuma tarefa encontrada no arquivo para a área: ${selectedArea}. (Total no arquivo: ${originalCount})`);
+                    }
+
+                    // 2. Delete existing rows for this area
+                    const { error: delError } = await this.supabase.from('tarefas').delete().eq('area', selectedArea);
+                    if (delError) throw delError;
+                }
+
+                // Batch insert (Supabase allows bulk insert)
+                const { error: insertError } = await this.supabase.from('tarefas').insert(rowsToInsert);
+                if (insertError) throw insertError;
+
+                statusEl.innerHTML = `<i class="fas fa-check text-green-600"></i> Importação concluída com sucesso!`;
+                setTimeout(() => {
+                    this.elements.importModal.classList.add('hidden');
+                    this.fetchData(); // Refresh grid
+                }, 1500);
+
+            } catch (err) {
+                console.error(err);
+                statusEl.className = 'p-3 bg-red-50 text-red-700 rounded-lg text-sm';
+                statusEl.innerHTML = `<i class="fas fa-times-circle"></i> Erro: ${err.message || err.toString()}`;
+            }
+        };
+        reader.readAsArrayBuffer(file);
     },
     
     setView(view) {
