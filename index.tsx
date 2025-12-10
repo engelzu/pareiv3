@@ -612,11 +612,11 @@ const App = {
         const el = this.elements.connectionStatus;
         if (navigator.onLine) {
             el.textContent = 'Online';
-            el.className = 'text-sm font-semibold px-3 py-1 rounded-full bg-green-100 text-green-800';
+            el.className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-800';
             this.processUpdateQueue().then(() => this.fetchData());
         } else {
             el.textContent = 'Offline';
-            el.className = 'text-sm font-semibold px-3 py-1 rounded-full bg-gray-200 text-gray-700';
+            el.className = 'text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-200 text-gray-700';
         }
     },
 
@@ -801,29 +801,34 @@ const App = {
         const ctx = document.getElementById('areaChartCanvas');
 
         // Logic: Count tasks per status
-        const statusCounts = {
-            'CONCLUÍDA': 0,
-            'EM ANDAMENTO': 0,
-            'ATRASADA': 0,
-            'PENDENTE': 0
+        const counts = {
+            concluida: 0,
+            em_andamento: 0,
+            atrasada: 0,
+            pendente: 0
         };
 
         this.state.filteredData.forEach(row => {
             // Ignore summary rows for status count
             if (row.resumo_sim_nao?.toUpperCase() === 'SIM') return;
             
-            let status = row.status || 'PENDENTE';
-            status = status.toUpperCase();
+            // Robust status matching
+            let status = (row.status || 'PENDENTE').toUpperCase();
             
-            if (statusCounts.hasOwnProperty(status)) {
-                statusCounts[status]++;
+            if (status.indexOf('CONCLU') >= 0) {
+                counts.concluida++;
+            } else if (status.indexOf('ANDAMENTO') >= 0) {
+                counts.em_andamento++;
+            } else if (status.indexOf('ATRASADA') >= 0) {
+                counts.atrasada++;
             } else {
-                statusCounts['PENDENTE']++;
+                counts.pendente++;
             }
         });
 
-        const labels = Object.keys(statusCounts);
-        const data = Object.values(statusCounts);
+        const labels = ['CONCLUÍDA', 'EM ANDAMENTO', 'ATRASADA', 'PENDENTE'];
+        const data = [counts.concluida, counts.em_andamento, counts.atrasada, counts.pendente];
+        
         const backgroundColors = [
             'rgba(34, 197, 94, 0.7)',  // CONCLUÍDA (Green)
             'rgba(59, 130, 246, 0.7)', // EM ANDAMENTO (Blue)
@@ -842,7 +847,7 @@ const App = {
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Quantidade de Tarefas por Status',
+                    label: 'Quantidade de Tarefas',
                     data: data,
                     backgroundColor: backgroundColors,
                     borderColor: borderColors,
@@ -854,7 +859,7 @@ const App = {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: false // Hide legend as bars are labeled
+                        display: false 
                     },
                     title: {
                         display: true,
