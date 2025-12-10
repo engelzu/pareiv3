@@ -1,0 +1,12 @@
+Este arquivo contém as instruções para a instalação e configuração do sistema PAREI V2.
+
+Por favor, adicione os passos detalhados aqui.
+
+
+https://vercel.com/engelmobiles-projects/pareiv3
+
+vercel perfil : engelmobile2020@gmail.com
+
+https://supabase.com/dashboard/project/oshfytkulfybyxvigsls/editor/17658?schema=public
+
+supabase perfil : luciano.emobile.consultoria@gmail.com
