@@ -800,38 +800,71 @@ const App = {
         this.elements.chartViewContainer.innerHTML = '<canvas id="areaChartCanvas"></canvas>';
         const ctx = document.getElementById('areaChartCanvas');
 
-        // Aggregate data by Area
-        const areaStats = {};
+        // Logic: Count tasks per status
+        const statusCounts = {
+            'CONCLUÍDA': 0,
+            'EM ANDAMENTO': 0,
+            'ATRASADA': 0,
+            'PENDENTE': 0
+        };
+
         this.state.filteredData.forEach(row => {
-            if (!row.area || row.resumo_sim_nao?.toUpperCase() === 'SIM') return;
-            if (!areaStats[row.area]) areaStats[row.area] = { total: 0, count: 0 };
-            areaStats[row.area].total += parseInt(row.avanco) || 0;
-            areaStats[row.area].count++;
+            // Ignore summary rows for status count
+            if (row.resumo_sim_nao?.toUpperCase() === 'SIM') return;
+            
+            let status = row.status || 'PENDENTE';
+            status = status.toUpperCase();
+            
+            if (statusCounts.hasOwnProperty(status)) {
+                statusCounts[status]++;
+            } else {
+                statusCounts['PENDENTE']++;
+            }
         });
 
-        const labels = Object.keys(areaStats);
-        const data = labels.map(area => Math.round(areaStats[area].total / areaStats[area].count));
+        const labels = Object.keys(statusCounts);
+        const data = Object.values(statusCounts);
+        const backgroundColors = [
+            'rgba(34, 197, 94, 0.7)',  // CONCLUÍDA (Green)
+            'rgba(59, 130, 246, 0.7)', // EM ANDAMENTO (Blue)
+            'rgba(239, 68, 68, 0.7)',  // ATRASADA (Red)
+            'rgba(156, 163, 175, 0.7)' // PENDENTE (Gray)
+        ];
+        const borderColors = [
+            'rgb(34, 197, 94)',
+            'rgb(59, 130, 246)',
+            'rgb(239, 68, 68)',
+            'rgb(156, 163, 175)'
+        ];
 
         this.state.chartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Média de Avanço por Área (%)',
+                    label: 'Quantidade de Tarefas por Status',
                     data: data,
-                    backgroundColor: 'rgba(59, 130, 246, 0.6)',
-                    borderColor: 'rgba(59, 130, 246, 1)',
+                    backgroundColor: backgroundColors,
+                    borderColor: borderColors,
                     borderWidth: 1
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false // Hide legend as bars are labeled
+                    },
+                    title: {
+                        display: true,
+                        text: 'Status das Tarefas'
+                    }
+                },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        max: 100,
-                        ticks: { callback: (value) => value + '%' }
+                        ticks: { stepSize: 1 }
                     }
                 }
             }
@@ -948,6 +981,7 @@ const App = {
                     if (header === 'NOME DA TAREFA') {
                         td.classList.remove('whitespace-nowrap');
                         td.classList.add('whitespace-normal');
+                        td.classList.add('min-w-[200px]'); // Ensure minimum width for task names on mobile
                     }
                     
                     if (header === 'AVANÇO') this.renderAvancoCell(td, row, isResumoSim);
@@ -993,18 +1027,18 @@ const App = {
                  // Sticky behavior for Summary Cards (Cabeçalho entre registros)
                 if (isSummary) {
                     const card = document.createElement('div');
-                    card.className = 'col-span-full sticky top-0 z-30 bg-blue-600 text-white rounded-lg shadow-md p-3 flex justify-between items-center mb-2 mt-2';
+                    card.className = 'col-span-full sticky top-0 z-30 bg-blue-600 text-white rounded-lg shadow-md p-3 flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 mt-2 gap-2';
                     card.innerHTML = `
-                        <div class="flex items-center gap-3">
-                             <h3 class="font-bold text-lg uppercase tracking-wide">${row.nome_da_tarefa || 'Agrupamento'}</h3>
-                             <span class="px-2 py-0.5 text-xs bg-white/20 rounded text-white font-mono">${row.ordem || ''}</span>
+                        <div class="flex items-center gap-3 w-full sm:w-auto">
+                             <h3 class="font-bold text-base sm:text-lg uppercase tracking-wide break-words">${row.nome_da_tarefa || 'Agrupamento'}</h3>
+                             <span class="px-2 py-0.5 text-xs bg-white/20 rounded text-white font-mono flex-shrink-0">${row.ordem || ''}</span>
                         </div>
-                        <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-4 w-full sm:w-auto">
                              <div class="flex items-center gap-2">
                                 <span class="text-sm font-medium opacity-90">Avanço:</span>
                                 <span class="font-bold">${avanco}%</span>
                              </div>
-                             <div class="w-24 bg-blue-800 rounded-full h-2">
+                             <div class="flex-grow sm:w-24 bg-blue-800 rounded-full h-2">
                                 <div class="bg-white h-2 rounded-full" style="width: ${avanco}%"></div>
                              </div>
                         </div>
@@ -1024,7 +1058,7 @@ const App = {
                 } else {
                     footerHTML = `
                         <div class="flex items-center gap-3">
-                            <button data-action="decrement" class="w-7 h-7 flex-shrink-0 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white font-bold rounded-full transition-colors text-lg">
+                            <button data-action="decrement" class="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white font-bold rounded-full transition-colors text-lg touch-manipulation">
                                 -
                             </button>
                             <div class="w-full">
@@ -1032,11 +1066,11 @@ const App = {
                                     <span class="font-semibold text-slate-700">Avanço</span>
                                     <span class="font-bold text-red-600">${avanco}%</span>
                                 </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div class="bg-blue-600 h-2 rounded-full" style="width: ${avanco}%"></div>
+                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                    <div class="bg-blue-600 h-3 rounded-full" style="width: ${avanco}%"></div>
                                 </div>
                             </div>
-                            <button data-action="increment" class="w-7 h-7 flex-shrink-0 flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-bold rounded-full transition-colors text-lg">
+                            <button data-action="increment" class="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-bold rounded-full transition-colors text-lg touch-manipulation">
                                 +
                             </button>
                         </div>
@@ -1044,21 +1078,23 @@ const App = {
                 }
 
                 const card = document.createElement('div');
-                card.className = 'bg-white border border-slate-200 rounded-lg shadow-md flex flex-col p-4 transition-all hover:shadow-xl hover:-translate-y-1';
+                card.className = 'bg-white border border-slate-200 rounded-lg shadow-md flex flex-col p-4 transition-all hover:shadow-xl hover:-translate-y-1 relative';
                 
+                // Added break-words and whitespace-normal to the title h3
                 card.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="font-bold text-slate-800 pr-2">${row.nome_da_tarefa || 'Tarefa sem nome'}</h3>
-                        <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${colorClass} whitespace-nowrap">${statusText}</span>
+                    <div class="flex justify-between items-start mb-2 gap-2">
+                        <h3 class="font-bold text-slate-800 text-sm sm:text-base break-words whitespace-normal leading-tight">${row.nome_da_tarefa || 'Tarefa sem nome'}</h3>
+                        <span class="px-2 py-1 text-[10px] sm:text-xs font-semibold rounded-full ${colorClass} whitespace-nowrap flex-shrink-0">${statusText}</span>
                     </div>
-                    <div class="bg-slate-50 p-3 rounded-md text-sm text-slate-600 space-y-1 my-3">
-                        <p><strong>Responsável:</strong> ${row.responsavel || '-'}</p>
-                        <p><strong>Ordem:</strong> ${row.ordem || '-'}</p>
-                        <p><strong>ID Exclusiva:</strong> ${row.id_csv || '-'}</p>
-                        <p><strong>Início Base:</strong> ${formatDate(row.inicio_da_linha_de_base)}</p>
-                        <p><strong>Término Base:</strong> ${formatDate(row.termino_da_linha_de_base)}</p>
+                    <div class="bg-slate-50 p-3 rounded-md text-xs sm:text-sm text-slate-600 space-y-1 my-3">
+                        <p class="flex justify-between"><span class="font-semibold">Resp:</span> <span class="truncate ml-2">${row.responsavel || '-'}</span></p>
+                        <p class="flex justify-between"><span class="font-semibold">Ordem:</span> <span>${row.ordem || '-'}</span></p>
+                        <p class="flex justify-between"><span class="font-semibold">ID:</span> <span>${row.id_csv || '-'}</span></p>
+                        <div class="border-t border-slate-200 my-1 pt-1"></div>
+                        <p class="flex justify-between"><span class="font-semibold">Início:</span> <span>${formatDate(row.inicio_da_linha_de_base)}</span></p>
+                        <p class="flex justify-between"><span class="font-semibold">Fim:</span> <span>${formatDate(row.termino_da_linha_de_base)}</span></p>
                     </div>
-                    <div class="mt-4 pt-3 border-t border-slate-200">
+                    <div class="mt-auto pt-3 border-t border-slate-200">
                        ${footerHTML}
                     </div>
                 `;
@@ -1132,7 +1168,7 @@ const App = {
         const totalItems = filteredData.length;
         const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-        if (this.elements.paginationInfo) this.elements.paginationInfo.textContent = `Mostrando ${totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} a ${Math.min(currentPage * itemsPerPage, totalItems)} de ${totalItems} registros`;
+        if (this.elements.paginationInfo) this.elements.paginationInfo.textContent = `Mostrando ${totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} a ${Math.min(currentPage * itemsPerPage, totalItems)} de ${totalItems}`;
         
         const pageNumbersContainer = this.elements.pageNumbers;
         if (!pageNumbersContainer) return;
@@ -1155,12 +1191,12 @@ const App = {
         const createPageButton = (page) => {
              if (page === '...') {
                 const span = document.createElement('span');
-                span.className = 'px-3 py-2 text-sm text-gray-500';
+                span.className = 'px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm text-gray-500';
                 span.textContent = '...';
                 return span;
             }
             const btn = document.createElement('button');
-            btn.className = `relative inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md ${currentPage === page ? 'z-10 bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}`;
+            btn.className = `relative inline-flex items-center px-3 py-1 sm:px-4 sm:py-2 border text-xs sm:text-sm font-medium rounded-md ${currentPage === page ? 'z-10 bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}`;
             btn.textContent = page;
             btn.onclick = () => { this.state.currentPage = page; this.renderContent(); };
             return btn;
@@ -1171,10 +1207,10 @@ const App = {
     },
 
     getPaginationPages(currentPage, totalPages) {
-        if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
-        if (currentPage <= 4) return [1, 2, 3, 4, 5, '...', totalPages];
-        if (currentPage >= totalPages - 3) return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
-        return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+        if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
+        if (currentPage <= 3) return [1, 2, 3, '...', totalPages];
+        if (currentPage >= totalPages - 2) return [1, '...', totalPages - 2, totalPages - 1, totalPages];
+        return [1, '...', currentPage, '...', totalPages]; // Reduced visible pages for mobile
     },
 
     populateFilterDropdowns() {

@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>PAREI - Gestão de Tarefas</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
@@ -21,14 +21,14 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <link rel="stylesheet" href="/index.css">
 </head>
-<body class="bg-slate-200">
+<body class="bg-slate-200 overflow-x-hidden">
 
   <!-- Login Screen -->
   <div id="loginScreen" class="fixed inset-0 bg-slate-800 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md">
+    <div class="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-md mx-2">
       <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold text-blue-900">PAREI V2</h1>
-        <p class="text-slate-500 mt-2">Sistema de Gestão de Tarefas</p>
+        <h1 class="text-2xl sm:text-3xl font-bold text-blue-900">PAREI V2</h1>
+        <p class="text-slate-500 mt-2 text-sm sm:text-base">Sistema de Gestão de Tarefas</p>
       </div>
       
       <div class="space-y-4">
@@ -54,7 +54,7 @@
 
         <div id="loginError" class="text-red-500 text-sm font-medium hidden text-center bg-red-50 p-2 rounded"></div>
 
-        <button id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors mt-4">
+        <button id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors mt-4 touch-manipulation">
           ENTRAR
         </button>
       </div>
@@ -62,20 +62,20 @@
   </div>
 
   <!-- Main App (Hidden by default) -->
-  <div id="mainApp" class="hidden py-8 px-4">
-    <div class="bg-white rounded-xl shadow-lg">
+  <div id="mainApp" class="hidden py-4 sm:py-8 px-2 sm:px-4 w-full">
+    <div class="bg-white rounded-xl shadow-lg w-full max-w-7xl mx-auto">
       <!-- Header Section -->
-      <div class="bg-gradient-to-b from-blue-900 to-blue-700 p-6 rounded-t-xl border-b border-blue-900/50">
+      <div class="bg-gradient-to-b from-blue-900 to-blue-700 p-4 sm:p-6 rounded-t-xl border-b border-blue-900/50">
         <!-- Top Bar with User Info -->
-        <div class="flex justify-between items-center mb-4 border-b border-blue-600/30 pb-4">
-           <div class="flex items-center gap-2 text-blue-100 text-sm">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b border-blue-600/30 pb-4 gap-3">
+           <div class="flex items-center gap-2 text-blue-100 text-sm w-full sm:w-auto">
              <i class="fas fa-user-circle"></i>
-             <span id="currentUserDisplay">Usuário</span>
-             <span id="adminBadge" class="hidden bg-yellow-500 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full ml-2">ADMIN</span>
+             <span id="currentUserDisplay" class="truncate max-w-[150px] sm:max-w-none">Usuário</span>
+             <span id="adminBadge" class="hidden bg-yellow-500 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full ml-2">ADMIN</span>
            </div>
-           <div class="flex gap-2">
+           <div class="flex gap-2 w-full sm:w-auto justify-end">
              <button id="adminRegisterUserBtn" class="hidden bg-blue-800 hover:bg-blue-600 text-white text-xs px-3 py-1.5 rounded transition-colors border border-blue-500">
-               <i class="fas fa-user-plus mr-1"></i> Cadastrar Usuário
+               <i class="fas fa-user-plus mr-1"></i> <span class="hidden sm:inline">Cadastrar Usuário</span><span class="sm:hidden">Novo User</span>
              </button>
              <button id="logoutBtn" class="bg-red-500/20 hover:bg-red-500 text-white text-xs px-3 py-1.5 rounded transition-colors border border-red-500/30">
                <i class="fas fa-sign-out-alt mr-1"></i> Sair
@@ -83,76 +83,82 @@
            </div>
         </div>
 
-        <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-          <h1 class="text-2xl font-bold text-white sm:self-center">PAREI - Gestão de Tarefas</h1>
-          <div class="flex flex-wrap items-center justify-center sm:justify-end gap-4 w-full sm:flex-nowrap sm:w-auto">
-            <span id="connectionStatus"></span>
-            <span id="lastUpdated" class="text-sm text-blue-200 whitespace-nowrap"></span>
-            <button id="exportBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto transition-colors">
-              <i class="fas fa-file-excel mr-2"></i>Exportar Template
-            </button>
-            <button id="importBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto transition-colors">
-              <i class="fas fa-upload mr-2"></i>Importar Dados
-            </button>
-            <input type="file" id="fileInput" class="hidden" accept=".xlsx, .xls">
-            <button id="refreshBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center w-full sm:w-auto transition-colors">
-              <i class="fas fa-sync-alt mr-2"></i>Atualizar
-            </button>
+        <div class="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4">
+          <h1 class="text-xl sm:text-2xl font-bold text-white self-start lg:self-center">PAREI</h1>
+          <div class="flex flex-wrap items-center justify-start lg:justify-end gap-2 w-full lg:w-auto">
+            <span id="connectionStatus" class="mb-2 w-full sm:w-auto text-center sm:mb-0"></span>
+            
+            <div class="flex flex-wrap gap-2 w-full sm:w-auto justify-center sm:justify-end">
+                <button id="exportBtn" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg flex items-center justify-center text-sm flex-1 sm:flex-none transition-colors">
+                  <i class="fas fa-file-excel sm:mr-2"></i><span class="hidden sm:inline">Exportar Template</span>
+                </button>
+                <button id="importBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg flex items-center justify-center text-sm flex-1 sm:flex-none transition-colors">
+                  <i class="fas fa-upload sm:mr-2"></i><span class="hidden sm:inline">Importar Dados</span><span class="sm:hidden">Importar</span>
+                </button>
+                <input type="file" id="fileInput" class="hidden" accept=".xlsx, .xls">
+                <button id="refreshBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg flex items-center justify-center text-sm flex-1 sm:flex-none transition-colors">
+                  <i class="fas fa-sync-alt sm:mr-2"></i><span class="hidden sm:inline">Atualizar</span>
+                </button>
+            </div>
+            <div class="w-full text-center sm:text-right mt-1">
+                 <span id="lastUpdated" class="text-xs text-blue-200 whitespace-normal"></span>
+            </div>
           </div>
         </div>
 
         <!-- Filters Section -->
         <div id="filterControls" class="space-y-4">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-blue-200 mb-1">Pesquisar</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                <div class="col-span-1 sm:col-span-2 lg:col-span-1">
+                    <label class="block text-xs font-medium text-blue-200 mb-1">Pesquisar</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fas fa-search text-gray-400"></i>
                         </div>
-                        <input id="searchInput" type="text" placeholder="Nome, status, responsável..." class="dark-input pl-10" maxlength="100">
+                        <input id="searchInput" type="text" placeholder="Buscar..." class="dark-input pl-10 text-sm" maxlength="100">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-blue-200 mb-1">ÁREA</label>
-                    <select id="areaFilter" class="dark-input"></select>
+                    <label class="block text-xs font-medium text-blue-200 mb-1">ÁREA</label>
+                    <select id="areaFilter" class="dark-input text-sm"></select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-blue-200 mb-1">RESPONSÁVEL</label>
-                    <select id="responsavelFilter" class="dark-input"></select>
+                    <label class="block text-xs font-medium text-blue-200 mb-1">RESPONSÁVEL</label>
+                    <select id="responsavelFilter" class="dark-input text-sm"></select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-blue-200 mb-1">ATUALIZADOR 1</label>
-                    <select id="atualizador1Filter" class="dark-input"></select>
+                    <label class="block text-xs font-medium text-blue-200 mb-1">ATUALIZADOR 1</label>
+                    <select id="atualizador1Filter" class="dark-input text-sm"></select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-blue-200 mb-1">TIPO DE TAREFA</label>
-                    <select id="typeFilter" class="dark-input">
+                    <label class="block text-xs font-medium text-blue-200 mb-1">TIPO</label>
+                    <select id="typeFilter" class="dark-input text-sm">
                         <option value="">Todos</option>
                         <option value="SIM">Resumo</option>
                         <option value="NAO">Tarefa</option>
                     </select>
                 </div>
             </div>
-             <div class="flex flex-col sm:flex-row justify-between items-center pt-2 gap-4">
-                <div class="flex flex-col sm:flex-row items-center gap-4">
-                    <div class="flex items-center space-x-1 bg-white/10 p-1 rounded-lg">
-                        <button id="viewToggleList" class="px-4 py-1.5 text-sm font-semibold rounded-md flex items-center gap-2 transition-colors text-blue-200">
+             <div class="flex flex-col lg:flex-row justify-between items-center pt-2 gap-4">
+                <div class="flex flex-col w-full lg:w-auto items-center gap-2">
+                    <!-- Botões de visualização adaptáveis -->
+                    <div class="flex flex-wrap justify-center sm:justify-start items-center gap-1 bg-white/10 p-1 rounded-lg w-full sm:w-auto">
+                        <button id="viewToggleList" class="flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md flex justify-center items-center gap-2 transition-colors text-blue-200 whitespace-nowrap">
                             <i class="fas fa-list"></i> Lista
                         </button>
-                        <button id="viewToggleCard" class="px-4 py-1.5 text-sm font-semibold rounded-md flex items-center gap-2 transition-colors text-blue-200">
-                            <i class="fas fa-th-large"></i> Cartão
+                        <button id="viewToggleCard" class="flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md flex justify-center items-center gap-2 transition-colors text-blue-200 whitespace-nowrap">
+                            <i class="fas fa-th-large"></i> Cards
                         </button>
-                        <button id="viewToggleChart" class="px-4 py-1.5 text-sm font-semibold rounded-md flex items-center gap-2 transition-colors text-blue-200">
+                        <button id="viewToggleChart" class="flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md flex justify-center items-center gap-2 transition-colors text-blue-200 whitespace-nowrap">
                            <i class="fas fa-chart-bar"></i> Gráfico
                         </button>
-                        <button id="viewTogglePrevReal" class="px-4 py-1.5 text-sm font-semibold rounded-md flex items-center gap-2 transition-colors text-blue-200">
+                        <button id="viewTogglePrevReal" class="flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-md flex justify-center items-center gap-2 transition-colors text-blue-200 whitespace-nowrap">
                            <i class="fas fa-chart-line"></i> Prev x Real
                         </button>
                     </div>
-                    <div id="taskCount" class="text-sm font-semibold text-blue-200"></div>
+                    <div id="taskCount" class="text-xs font-semibold text-blue-200 text-center w-full sm:w-auto"></div>
                 </div>
-                <button id="clearFilters" class="mt-4 sm:mt-0 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg border border-white/20 flex items-center justify-center w-full sm:w-auto transition-colors">
+                <button id="clearFilters" class="w-full lg:w-auto bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg border border-white/20 flex items-center justify-center transition-colors text-sm">
                     <i class="fas fa-times mr-2"></i>Limpar Filtros
                 </button>
             </div>
@@ -160,7 +166,7 @@
       </div>
 
       <!-- Main Content -->
-     <div class="p-2 sm:p-6 bg-gradient-to-b from-blue-400 to-green-400">
+     <div class="p-2 sm:p-6 bg-gradient-to-b from-blue-400 to-green-400 min-h-[50vh]">
         <div id="loading" class="text-center py-20">
             <svg class="mx-auto h-12 w-12 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -169,16 +175,14 @@
             <p class="mt-4 text-slate-600">Carregando dados...</p>
         </div>
 
-        <div id="errorContainer" class="hidden m-6">
+        <div id="errorContainer" class="hidden m-2 sm:m-6">
              <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-exclamation-circle text-red-500"></i>
-                    </div>
-                    <div class="ml-3">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center">
+                    <div class="flex items-center mb-2 sm:mb-0">
+                        <i class="fas fa-exclamation-circle text-red-500 mr-2"></i>
                         <p id="errorMessage" class="text-sm text-red-700"></p>
                     </div>
-                    <button id="retryBtn" class="ml-auto bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-lg text-sm transition-colors">
+                    <button id="retryBtn" class="sm:ml-auto w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-lg text-sm transition-colors">
                         Tentar novamente
                     </button>
                 </div>
@@ -187,7 +191,7 @@
 
         <div id="dataContainer" class="hidden">
            <!-- Table View -->
-           <div id="tableViewContainer" class="overflow-x-auto">
+           <div id="tableViewContainer" class="overflow-x-auto rounded-lg shadow-sm">
               <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                   <tr id="tableHeaders"></tr>
@@ -197,30 +201,30 @@
            </div>
            
            <!-- Card View -->
-           <div id="cardViewContainer" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+           <div id="cardViewContainer" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               <!-- Cards will be inserted here by JavaScript -->
            </div>
 
            <!-- Chart View -->
-           <div id="chartViewContainer" class="hidden p-4 bg-white rounded-lg" style="height: 500px;">
-              <canvas id="areaChart"></canvas>
+           <div id="chartViewContainer" class="hidden p-2 sm:p-4 bg-white rounded-lg shadow-lg relative h-[400px] sm:h-[500px]">
+              <canvas id="areaChartCanvas"></canvas>
            </div>
            
            <!-- Previsto x Realizado Chart View -->
-           <div id="prevRealChartContainer" class="hidden p-4 bg-white rounded-lg" style="height: 500px;">
-              <canvas id="prevRealChart"></canvas>
+           <div id="prevRealChartContainer" class="hidden p-2 sm:p-4 bg-white rounded-lg shadow-lg relative h-[400px] sm:h-[500px]">
+              <canvas id="prevRealChartCanvas"></canvas>
            </div>
            
           <!-- Pagination -->
           <div id="paginationContainer">
-            <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 px-4">
-              <div id="paginationInfo" class="text-sm text-slate-700"></div>
+            <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 px-2 sm:px-4 pb-4">
+              <div id="paginationInfo" class="text-sm text-slate-700 text-center sm:text-left"></div>
               <div class="flex items-center flex-wrap justify-center gap-2">
-                <button id="prevPage" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                <button id="prevPage" class="relative inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors">
                   Anterior
                 </button>
-                <div id="pageNumbers" class="flex items-center space-x-1"></div>
-                <button id="nextPage" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                <div id="pageNumbers" class="flex items-center space-x-1 overflow-x-auto max-w-[200px] sm:max-w-none"></div>
+                <button id="nextPage" class="relative inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors">
                   Próxima
                 </button>
               </div>
@@ -233,7 +237,7 @@
 
   <!-- Password Modal (Existing) -->
   <div id="passwordModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md transition-all">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md transition-all mx-2">
       <!-- Step 1: Password Input -->
       <div id="passwordStep1">
         <div class="flex justify-between items-center">
@@ -246,8 +250,8 @@
           <p id="passwordError" class="text-red-500 text-sm mt-1 h-4"></p>
         </div>
         <div class="mt-6 flex justify-end gap-3">
-          <button id="passwordCancelBtn" class="bg-gray-200 hover:bg-gray-300 text-slate-700 px-4 py-2 rounded-lg">Cancelar</button>
-          <button id="passwordSubmitBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Confirmar</button>
+          <button id="passwordCancelBtn" class="bg-gray-200 hover:bg-gray-300 text-slate-700 px-4 py-2 rounded-lg text-sm">Cancelar</button>
+          <button id="passwordSubmitBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">Confirmar</button>
         </div>
       </div>
       
@@ -261,15 +265,15 @@
           <p>Para sua segurança, é obrigatório exportar os dados atuais antes de importar um novo arquivo. Isso cria um backup antes de substituir toda a base de dados.</p>
         </div>
         <div class="mt-6 flex flex-col gap-4">
-          <button id="exportCurrentDataBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center w-full transition-colors">
+          <button id="exportCurrentDataBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center w-full transition-colors text-sm">
             <i class="fas fa-download mr-2"></i>Exportar Dados Atuais
           </button>
-          <button id="proceedToImportBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center w-full transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+          <button id="proceedToImportBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center justify-center w-full transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed text-sm" disabled>
             <i class="fas fa-upload mr-2"></i>Prosseguir para Importação
           </button>
         </div>
         <div class="mt-4 flex justify-end">
-            <button id="passwordCancelBtn2" class="bg-gray-200 hover:bg-gray-300 text-slate-700 px-4 py-2 rounded-lg">Cancelar</button>
+            <button id="passwordCancelBtn2" class="bg-gray-200 hover:bg-gray-300 text-slate-700 px-4 py-2 rounded-lg text-sm">Cancelar</button>
         </div>
       </div>
     </div>
@@ -277,7 +281,7 @@
 
   <!-- Import Modal (Existing) -->
   <div id="importModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-2">
       <div class="flex justify-between items-center">
         <h3 id="importModalTitle" class="text-lg font-bold text-slate-800">Importar Dados</h3>
         <button id="importModalCloseBtn" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
@@ -286,14 +290,14 @@
         <!-- Dynamic content here -->
       </div>
       <div class="mt-6 flex justify-end">
-        <button id="importModalActionBtn" class="bg-gray-200 hover:bg-gray-300 text-slate-700 px-4 py-2 rounded-lg">Fechar</button>
+        <button id="importModalActionBtn" class="bg-gray-200 hover:bg-gray-300 text-slate-700 px-4 py-2 rounded-lg text-sm">Fechar</button>
       </div>
     </div>
   </div>
   
   <!-- Register User Modal (New) -->
   <div id="registerUserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-2">
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-lg font-bold text-slate-800">Cadastrar Novo Usuário</h3>
         <button id="registerUserModalCloseBtn" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
@@ -320,8 +324,8 @@
       </div>
 
       <div class="mt-6 flex justify-end gap-2">
-        <button id="registerUserCancelBtn" class="bg-gray-200 hover:bg-gray-300 text-slate-700 px-4 py-2 rounded-lg">Cancelar</button>
-        <button id="registerUserSubmitBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Salvar Usuário</button>
+        <button id="registerUserCancelBtn" class="bg-gray-200 hover:bg-gray-300 text-slate-700 px-4 py-2 rounded-lg text-sm">Cancelar</button>
+        <button id="registerUserSubmitBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">Salvar Usuário</button>
       </div>
     </div>
   </div>
